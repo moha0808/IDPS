@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Lab Firewall & Prevention | IDPS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-user-shield" style="color: var(--sev-critical);"></i> Simulated Lab Firewall & Prevention Module</h1>
+        <p class="page-desc">Manage simulated firewall blocklists, automated risk enforcement rules & laboratory mitigations.</p>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr 2fr;">
+    <!-- Add Block Form -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-shield-virus" style="color: var(--sev-critical);"></i> Manual IP Firewall Block</h3>
+        </div>
+        <form id="block-form" onsubmit="handleManualBlock(event)">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Target IP Address</label>
+                <input type="text" id="block-ip-input" class="form-control" placeholder="e.g. 192.168.1.50" required style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Reason / Policy Violation</label>
+                <input type="text" id="block-reason-input" class="form-control" placeholder="e.g. Malicious Port Scanning" style="width: 100%;">
+            </div>
+            <button type="submit" class="btn btn-danger" style="width: 100%;"><i class="fa-solid fa-ban"></i> Enforce IP Block</button>
+        </form>
+
+        <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
+
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+            <h4 style="color: #fff; margin-bottom: 8px;"><i class="fa-solid fa-circle-info" style="color: var(--accent-cyan);"></i> Auto-Prevention Policy</h4>
+            <p>IDPS will automatically block any source IP when its cumulative Risk Score reaches <strong>80/100</strong> or upon <strong>CRITICAL signature matches</strong>.</p>
+        </div>
+    </div>
+
+    <!-- Active Blocklist Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-list-check" style="color: var(--accent-purple);"></i> Active Blocked IPs List</h3>
+            <button class="btn btn-sm btn-cyan" onclick="loadBlockedList()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Blocked Timestamp</th>
+                        <th>IP Address</th>
+                        <th>Reason</th>
+                        <th>Enforced By</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="blocked-tbody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading firewall blocklist...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    loadBlockedList();
+});
+
+async function loadBlockedList() {
+    try {
+        const res = await fetch("/api/prevention/blocked");
+        const data = await res.json();
+        const tbody = document.getElementById("blocked-tbody");
+
+        if (!data.blocked_ips || data.blocked_ips.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No IPs currently blocked in lab firewall.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.blocked_ips.map(b => `
+            <tr>
+                <td>#${b.id}</td>
+                <td>${b.time_str}</td>
+                <td><strong style="color: var(--sev-critical);">${b.ip}</strong></td>
+                <td>${b.reason}</td>
+                <td><span class="badge badge-blocked">${b.blocked_by}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-cyan" onclick="unblockIP('${b.ip}')"><i class="fa-solid fa-lock-open"></i> Unblock</button>
+                </td>
+            </tr>
+        `).join("");
+    } catch(err) {
+        console.error("Error loading blocklist:", err);
+    }
+}
+
+async function handleManualBlock(e) {
+    e.preventDefault();
+    const ip = document.getElementById("block-ip-input").value.trim();
+    const reason = document.getElementById("block-reason-input").value.trim() || "Manual SOC Firewall Rule";
+
+    if (!ip) return;
+
+    const res = await fetch("/api/prevention/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip, reason })
+    });
+    const result = await res.json();
+    alert(result.message);
+    document.getElementById("block-ip-input").value = "";
+    document.getElementById("block-reason-input").value = "";
+    loadBlockedList();
+}
+
+async function unblockIP(ip) {
+    if (!confirm(`Unblock IP ${ip}?`)) return;
+    await fetch("/api/prevention/unblock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip })
+    });
+    loadBlockedList();
+}
+</script>
+{% endblock %}

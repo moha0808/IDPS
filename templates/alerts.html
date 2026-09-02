@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Security Alerts Log | IDPS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-triangle-exclamation" style="color: var(--sev-medium);"></i> Security Alerts Log</h1>
+        <p class="page-desc">Comprehensive history of detected security indicators, signature violations & risk scores.</p>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <div>
+            <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Severity Filter</label>
+            <select id="filter-severity" class="form-control" onchange="loadAlertsTable()">
+                <option value="">All Severities</option>
+                <option value="CRITICAL">CRITICAL</option>
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Status Filter</label>
+            <select id="filter-status" class="form-control" onchange="loadAlertsTable()">
+                <option value="">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="Investigating">Investigating</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Blocked">Blocked</option>
+            </select>
+        </div>
+        <div style="margin-left: auto; align-self: flex-end;">
+            <button class="btn btn-cyan" onclick="loadAlertsTable()"><i class="fa-solid fa-rotate"></i> Refresh Logs</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Timestamp</th>
+                    <th>Source IP</th>
+                    <th>Destination IP</th>
+                    <th>Alert Type</th>
+                    <th>Severity</th>
+                    <th>Confidence</th>
+                    <th>Risk Score</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="alerts-page-tbody">
+                <tr>
+                    <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading security alerts...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    loadAlertsTable();
+});
+
+async function loadAlertsTable() {
+    const sev = document.getElementById("filter-severity").value;
+    const status = document.getElementById("filter-status").value;
+    let url = `/api/alerts?limit=100`;
+    if (sev) url += `&severity=${sev}`;
+    if (status) url += `&status=${status}`;
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const tbody = document.getElementById("alerts-page-tbody");
+
+        if (!data.alerts || data.alerts.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2rem;">No security alerts match the selected criteria.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.alerts.map(a => {
+            const sevClass = (a.severity || 'LOW').toLowerCase();
+            return `
+                <tr>
+                    <td>#${a.id}</td>
+                    <td>${a.time_str}</td>
+                    <td style="color: var(--accent-cyan);">${a.src_ip}</td>
+                    <td>${a.dst_ip}</td>
+                    <td><strong>${a.alert_type}</strong></td>
+                    <td><span class="badge badge-${sevClass}">${a.severity}</span></td>
+                    <td>${a.confidence}</td>
+                    <td><strong style="color: ${a.risk_score >= 80 ? 'var(--sev-critical)' : a.risk_score >= 50 ? 'var(--sev-medium)' : 'var(--sev-low)'}">${a.risk_score}/100</strong></td>
+                    <td><span class="badge badge-${a.status ? a.status.toLowerCase() : 'open'}">${a.status || 'Open'}</span></td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted); max-width: 250px;">${a.details || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-cyan" onclick="updateStatus(${a.id}, 'Resolved')">Resolve</button>
+                        <button class="btn btn-sm btn-danger" onclick="quickBlockIP('${a.src_ip}')">Block IP</button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    } catch(err) {
+        console.error("Error loading alerts:", err);
+    }
+}
+
+async function updateStatus(alertId, newStatus) {
+    await fetch("/api/alert/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alert_id: alertId, status: newStatus })
+    });
+    loadAlertsTable();
+}
+
+async function quickBlockIP(ip) {
+    if (!confirm(`Block IP ${ip} in lab firewall?`)) return;
+    await fetch("/api/prevention/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip: ip, reason: "Manual SOC Block from Alerts Log" })
+    });
+    alert(`IP ${ip} blocked!`);
+    loadAlertsTable();
+}
+</script>
+{% endblock %}

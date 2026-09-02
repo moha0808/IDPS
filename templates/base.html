@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}IDPS Security Dashboard{% endblock %}</title>
+    
+    <!-- Design Fonts & Stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for SOC Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="app-header">
+        <div class="brand-container">
+            <div class="brand-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+                <div class="brand-title">IDPS DEFENDER</div>
+                <div class="brand-subtitle">Intrusion Detection & Prevention System</div>
+            </div>
+        </div>
+
+        <nav>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="/alerts" class="nav-link {% if request.path == '/alerts' %}active{% endif %}"><i class="fa-solid fa-triangle-exclamation"></i> Alerts Log</a></li>
+                <li><a href="/traffic" class="nav-link {% if request.path == '/traffic' %}active{% endif %}"><i class="fa-solid fa-network-wired"></i> Packet Inspector</a></li>
+                <li><a href="/prevention" class="nav-link {% if request.path == '/prevention' %}active{% endif %}"><i class="fa-solid fa-user-shield"></i> Lab Firewall</a></li>
+                <li><a href="/reports" class="nav-link {% if request.path == '/reports' %}active{% endif %}"><i class="fa-solid fa-file-contract"></i> Reports</a></li>
+            </ul>
+        </nav>
+
+        <div class="header-status">
+            <span class="pulse-dot"></span>
+            <span>SYSTEM ACTIVE</span>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        Intrusion Detection & Prevention System (IDPS) &bull; Lab Mode Security Operations Platform &bull; Python Flask + Scapy
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

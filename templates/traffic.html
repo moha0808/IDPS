@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Packet Inspector | IDPS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-network-wired" style="color: var(--accent-cyan);"></i> Raw Packet Inspector</h1>
+        <p class="page-desc">Real-time deep packet inspection log showing protocols, ports, packet sizes & raw payload snippets.</p>
+    </div>
+    <div>
+        <button class="btn btn-cyan" onclick="loadTrafficTable()"><i class="fa-solid fa-rotate"></i> Refresh Packets</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Pkt ID</th>
+                    <th>Time</th>
+                    <th>Source IP</th>
+                    <th>Destination IP</th>
+                    <th>Protocol</th>
+                    <th>Src Port</th>
+                    <th>Dst Port</th>
+                    <th>Size (Bytes)</th>
+                    <th>Payload Snippet</th>
+                </tr>
+            </thead>
+            <tbody id="traffic-tbody">
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading packet stream...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    loadTrafficTable();
+    setInterval(loadTrafficTable, 3000);
+});
+
+async function loadTrafficTable() {
+    try {
+        const res = await fetch("/api/traffic?limit=50");
+        const data = await res.json();
+        const tbody = document.getElementById("traffic-tbody");
+
+        if (!data.packets || data.packets.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No packets captured yet.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.packets.map(p => `
+            <tr>
+                <td>#${p.id}</td>
+                <td>${p.time_str}</td>
+                <td style="color: var(--accent-cyan);">${p.src_ip}</td>
+                <td>${p.dst_ip}</td>
+                <td><span class="badge badge-info">${p.protocol}</span></td>
+                <td>${p.src_port || '-'}</td>
+                <td>${p.dst_port || '-'}</td>
+                <td>${p.size} B</td>
+                <td style="font-size: 0.78rem; color: var(--text-dim); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${escapeHtml(p.payload || '-')}
+                </td>
+            </tr>
+        `).join("");
+    } catch(err) {
+        console.error("Error loading traffic:", err);
+    }
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}SOC Security Dashboard | IDPS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-gauge-high" style="color: var(--accent-cyan);"></i> Security Operations Dashboard</h1>
+        <p class="page-desc">Real-time network traffic analysis, signature matching, anomaly detection & automated threat mitigation.</p>
+    </div>
+</div>
+
+<!-- Stat Counters Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Total Packets</span>
+            <span class="stat-value" id="stat-packets">0</span>
+        </div>
+        <div class="stat-icon cyan"><i class="fa-solid fa-cubes"></i></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Unique Hosts</span>
+            <span class="stat-value" id="stat-sources">0</span>
+        </div>
+        <div class="stat-icon blue"><i class="fa-solid fa-server"></i></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Security Alerts</span>
+            <span class="stat-value" id="stat-alerts">0</span>
+        </div>
+        <div class="stat-icon amber"><i class="fa-solid fa-bell"></i></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">High / Critical Risk</span>
+            <span class="stat-value" id="stat-high-risk">0</span>
+        </div>
+        <div class="stat-icon red"><i class="fa-solid fa-radiation"></i></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Firewall Blocked</span>
+            <span class="stat-value" id="stat-blocked">0</span>
+        </div>
+        <div class="stat-icon purple"><i class="fa-solid fa-ban"></i></div>
+    </div>
+</div>
+
+<!-- Attack Simulator Panel -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fa-solid fa-flask" style="color: var(--accent-cyan);"></i> Cyber Lab Attack Simulator</h3>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Simulate attack traffic to test IDPS detection & risk engine response</span>
+    </div>
+    <div class="simulator-panel">
+        <button class="btn btn-cyan" onclick="triggerSimulation('port_scan')"><i class="fa-solid fa-barcode"></i> Port Scan Attack</button>
+        <button class="btn btn-cyan" onclick="triggerSimulation('excessive_conn')"><i class="fa-solid fa-bolt"></i> DoS Connection Spike</button>
+        <button class="btn btn-cyan" onclick="triggerSimulation('icmp_flood')"><i class="fa-solid fa-wave-square"></i> ICMP Ping Flood</button>
+        <button class="btn btn-danger" onclick="triggerSimulation('sqli')"><i class="fa-solid fa-bug"></i> SQL Injection Attack</button>
+        <button class="btn btn-danger" onclick="triggerSimulation('xss')"><i class="fa-solid fa-code"></i> XSS Payload Injection</button>
+    </div>
+</div>
+
+<!-- Dashboard Grid (Charts & Alerts) -->
+<div class="dashboard-grid">
+    <!-- Traffic Timeline Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-chart-area" style="color: var(--accent-blue);"></i> Live Network Packet Volume</h3>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="trafficChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Protocol Breakdown Donut -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-chart-pie" style="color: var(--accent-purple);"></i> Protocol Distribution</h3>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="protocolChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Live Threat Events Feed -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fa-solid fa-shield-cat" style="color: var(--sev-high);"></i> Recent Security Alerts Stream</h3>
+        <a href="/alerts" class="btn btn-sm"><i class="fa-solid fa-arrow-right"></i> View All Logs</a>
+    </div>
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Source IP</th>
+                    <th>Alert Type</th>
+                    <th>Protocol</th>
+                    <th>Severity</th>
+                    <th>Risk Score</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="alerts-tbody">
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Listening for incoming security events...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
